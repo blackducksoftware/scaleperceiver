@@ -2,6 +2,9 @@ import subprocess
 from StringIO import StringIO
 import json
 import random
+import sys
+# import requests # argh, can't import
+
 
 image_name = 'gcr.io/gke-verification/blackducksoftware/echoer'
 
@@ -16,56 +19,28 @@ def parse_sha(line):
 	sha = columns[2][7:]
 	return sha
 
-def make_image(line):
-	columns = line.split()
-	sha = columns[2][7:]
-	tag = columns[1]
-	return {
-#		'ImageName': '{}:{}'.format(image_name, tag),
-		'PullSpec': '{}@sha256:{}'.format(image_name, sha),
-		'Sha': sha,
-		'HubProjectName': '?',
-		'HubProjectVersionName': '?',
-		'HubScanName': '?'
-	}
-
 all_but_first_and_last_lines = csv.split('\n')[1:-1]
 shas = map(parse_sha, all_but_first_and_last_lines)
-# images = [make_image(line) for line in all_but_first_and_last_lines]
-
-# rows = map(lambda line: line.split()[2], filcsv.split('\n'))
-# print '\n'.join(rows)
-
-# print json.dumps(images, indent=2)
 
 def get_random_nums_totalling(total):
 	nums = []
+	running_total = 0
 	while sum(nums) < total:
-		nums.append(random.randint(1, 10))
+		next = random.randint(1, 10)
+		if (next + running_total) > total:
+			next = total - running_total
+		running_total += next
+		nums.append(next)
 	return nums
-
-# print get_random_nums_totalling(1000)
 
 def make_scan(sha, project, version, scan):
 	return {
-		'PullSpec': '{}@sha256:{}'.format(image_name, sha),
+		'Name': image_name,
+#		'PullSpec': '{}@sha256:{}'.format(image_name, sha),
 		'Sha': sha,
 		'HubProjectName': project,
 		'HubProjectVersionName': version,
 		'HubScanName': scan
-	}
-
-# def make_version(version_name):
-	
-
-def make_project(name, version_count):
-	versions = []
-	for i in range(version_count):
-		version_name = "test-version-{}".format(i + 1)
-		versions.append(make_version(version_name))
-	return {
-		'Name': name,
-		'Versions': versions
 	}
 
 def make_projects(total_scans):
@@ -88,4 +63,22 @@ def make_projects(total_scans):
 		projects.append({'Name': project, 'Versions': versions})
 	return (projects, scans)
 
-print json.dumps(make_projects(25), indent=2)
+def send_request_to_perceptor(url, scan):
+	full_url = "{}/image".format(url)
+	r = subprocess.Popen(
+		"""curl --header "Content-Type: application/json" -X POST --data '{}' {}""".format(json.dumps(scan), full_url),
+		shell=True,
+		stdout=subprocess.PIPE).stdout.read()
+# 	r = requests.post(url, data=scan)
+	return r
+
+
+perceptor_url, scan_count = sys.argv[1], int(sys.argv[2])
+
+projects_and_scans = make_projects(scan_count)
+
+for scan in projects_and_scans[1]:
+	print json.dumps(scan, indent=2)
+	print send_request_to_perceptor(perceptor_url, scan)
+
+# print json.dumps(make_projects(scan_count), indent=2)
