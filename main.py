@@ -38,9 +38,9 @@ def make_scan(sha, project, version, scan):
 		'Name': image_name,
 #		'PullSpec': '{}@sha256:{}'.format(image_name, sha),
 		'Sha': sha,
-		'HubProjectName': project,
-		'HubProjectVersionName': version,
-		'HubScanName': scan
+		'Project': project,
+		'Version': version,
+		'Scan': scan
 	}
 
 def make_projects(total_scans):
@@ -56,10 +56,11 @@ def make_projects(total_scans):
 #			print project_id, version_id, scan_count, shas[scan_index]
 			version = "proj-{}-version-{}".format(project_id, version_id)
 			scan = "proj-{}-version-{}-scan-{}".format(project_id, version_id, scan_count)
-			scans.append(make_scan(shas[scan_index], project, version, scan))
-			scan_count += 1
 			sha = shas[scan_index]
+#			print "sha: ", sha, shas
 			versions.append({'Name': version, 'Scan': {'Name': scan, 'Sha': sha, 'PullSpec': "{}@sha256:{}".format(image_name, sha)}})
+			scans.append(make_scan(sha, project, version, scan))
+			scan_count += 1
 		projects.append({'Name': project, 'Versions': versions})
 	return (projects, scans)
 
