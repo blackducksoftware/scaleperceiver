@@ -66,8 +66,10 @@ def make_projects(total_scans):
 
 def send_request_to_perceptor(url, scan):
 	full_url = "{}/image".format(url)
+	command = """curl --header "Content-Type: application/json" -X POST --data '{}' {}""".format(json.dumps(scan), full_url)
+	print command
 	r = subprocess.Popen(
-		"""curl --header "Content-Type: application/json" -X POST --data '{}' {}""".format(json.dumps(scan), full_url),
+		command,
 		shell=True,
 		stdout=subprocess.PIPE).stdout.read()
 # 	r = requests.post(url, data=scan)
